@@ -1,6 +1,8 @@
 #!/bin/bash
 
 #!/bin/bash
+TEST_FOLDER="../framework-test"
+
 find uchi/ -name "*.java" > sources.txt
 javac -cp lib/servlet-api.jar -d bin @sources.txt
 
@@ -9,5 +11,5 @@ cd bin
 jar -cvf ../myservlet.jar .
 cd ..
 
-cp myservlet.jar ../framework-test/lib/
+cp myservlet.jar $TEST_FOLDER/lib/
 echo "JAR built and copied."
