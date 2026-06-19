@@ -12,13 +12,20 @@ public class FrontControllerServlet extends HttpServlet {
     private List <String> controllersName;
     @Override
     public void init() {
+        String packageName = "controllers";
         try {
-            controllersName = UScanner.getControllers();
+            controllersName = UScanner.getControllers(packageName);
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
+    public void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        processRequest(request, response);
+    }
     public void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        processRequest(request, response);
+    }
+    public void processRequest(HttpServletRequest request, HttpServletResponse response) throws IOException{
         String url = request.getRequestURL().toString();
         PrintWriter out = response.getWriter();
         out.println("Hello world ! Full url: " + url);
