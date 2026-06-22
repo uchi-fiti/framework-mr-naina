@@ -3,9 +3,14 @@ package uchi.utils;
 import java.io.File;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Method;
 
 import uchi.annotations.UController;
+import uchi.annotations.UrlMapping;
 
 public class UScanner {
     public static List<Class<?>> getClasses(String packageName) throws Exception {
@@ -34,7 +39,7 @@ public class UScanner {
     public static List<Class<?>> getClassesWithAnnotation(List<Class<?>> classes, Class<?> annotationClass) {
         List<Class<?>> annotatedClasses = new ArrayList<>();
         if (annotationClass.isAnnotation()) {
-            Class<? extends java.lang.annotation.Annotation> ann = (Class<? extends java.lang.annotation.Annotation>) annotationClass;
+            Class<? extends Annotation> ann = (Class<? extends Annotation>) annotationClass;
             for (Class<?> clazz : classes) {
                 if (clazz.isAnnotationPresent(ann)) {
                     annotatedClasses.add(clazz);
@@ -53,4 +58,34 @@ public class UScanner {
         }
         return controllers;
     }
+    public static Map<String, Mapping> getUrlMappings(Class<?> clazz) {
+
+        Map<String, Mapping> routes =
+                new HashMap<>();
+
+        for (Method method : clazz.getDeclaredMethods()) {
+
+            if (method.isAnnotationPresent(
+                    UrlMapping.class)) {
+
+                UrlMapping annotation =
+                        method.getAnnotation(
+                                UrlMapping.class);
+
+                String url =annotation.url();
+                System.out.println("------------------------------------------");
+                System.out.println("Url: " + url);
+                System.out.println("------------------------------------------");
+                routes.put(
+                        url,
+                        new Mapping(
+                                clazz,
+                                method
+                        )
+                );
+            }
+        }
+
+        return routes;
+}
 }

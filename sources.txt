@@ -1,3 +1,6 @@
 uchi/servlet/FrontControllerServlet.java
+uchi/utils/Mapping.java
 uchi/utils/UScanner.java
+uchi/exceptions/NoSuchRouteException.java
 uchi/annotations/UController.java
+uchi/annotations/UrlMapping.java
