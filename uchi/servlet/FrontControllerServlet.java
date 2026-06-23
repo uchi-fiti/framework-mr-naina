@@ -1,7 +1,6 @@
 package uchi.servlet;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -50,7 +49,7 @@ public class FrontControllerServlet extends HttpServlet {
         PrintWriter out = response.getWriter();
 
         String contextPath = request.getContextPath();
-        String url = request.getRequestURL().toString();
+        // String url = request.getRequestURL().toString();
         String route = request.getRequestURI().replace(contextPath, "");
         MethodEnum methodEnum = MethodEnum.POST;
         response.setContentType("application/json");
