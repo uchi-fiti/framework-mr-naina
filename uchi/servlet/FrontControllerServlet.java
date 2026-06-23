@@ -38,16 +38,16 @@ public class FrontControllerServlet extends HttpServlet {
         try {
             processRequest(request, response);
         } catch (NoSuchRouteException e) {
-            PrintWriter out = response.getWriter();
-            out.print(e);
+            PrintWriter err = response.getWriter();
+            err.print(e);
         }
     }
     public void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
         try {
             processRequest(request, response);
         } catch (NoSuchRouteException e) {
-            PrintWriter out = response.getWriter();
-            out.print(e);
+            PrintWriter err = response.getWriter();
+            err.print(e);
         }
     }
     public void processRequest(HttpServletRequest request, HttpServletResponse response) throws IOException, NoSuchRouteException{
