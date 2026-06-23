@@ -58,31 +58,22 @@ public class UScanner {
         }
         return controllers;
     }
-    public static Map<String, Mapping> getUrlMappings(Class<?> clazz) {
+    public static Map<UrlMethod, Mapping> getUrlMappings(Class<?> clazz) {
 
-        Map<String, Mapping> routes =
-                new HashMap<>();
+        Map<UrlMethod, Mapping> routes = new HashMap<>();
 
         for (Method method : clazz.getDeclaredMethods()) {
 
-            if (method.isAnnotationPresent(
-                    UrlMapping.class)) {
+            if (method.isAnnotationPresent(UrlMapping.class)) {
 
-                UrlMapping annotation =
-                        method.getAnnotation(
-                                UrlMapping.class);
+                UrlMapping annotation = method.getAnnotation(UrlMapping.class);
 
-                String url =annotation.url();
-                System.out.println("------------------------------------------");
-                System.out.println("Url: " + url);
-                System.out.println("------------------------------------------");
-                routes.put(
-                        url,
-                        new Mapping(
-                                clazz,
-                                method
-                        )
-                );
+                String url = annotation.url();
+                MethodEnum m = annotation.method();
+                // System.out.println("------------------------------------------");
+                // System.out.println("Url: " + url);
+                // System.out.println("------------------------------------------");
+                routes.put(new UrlMethod(url, m), new Mapping(clazz, method));
             }
         }
 
