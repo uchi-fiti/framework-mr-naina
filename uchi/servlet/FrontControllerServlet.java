@@ -24,25 +24,9 @@ public class FrontControllerServlet extends HttpServlet {
     @Override
     // TODO: raha efa misy ilay route de mi-throw exception
     public void init() {
-        String packageName = "controllers";
-        try {
-            controllersName = UScanner.getControllers(packageName);
-
-            for (String className : controllersName) {
-
-                Class<?> clazz = Class.forName(className);
-                for (Map.Entry<UrlMethod, Mapping> entry:  UScanner.getUrlMappings(clazz).entrySet()) {
-                    if(!mappings.containsKey(entry.getKey())) {
-                        mappings.put(entry.getKey(), entry.getValue());
-                    } else {
-                        throw new DuplicateRouteException(entry.getKey(), mappings.get(entry.getKey()));
-                    }
-                }
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-            exception = e;
-        }
+        controllersName = (List<String>) getServletContext().getAttribute("controllersName");
+        mappings = (Map<UrlMethod, Mapping>) getServletContext().getAttribute("mappings");
+        exception = (Exception) getServletContext().getAttribute("exception");
     }
     public void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException {
         JSONObject obj = new JSONObject();
@@ -68,7 +52,6 @@ public class FrontControllerServlet extends HttpServlet {
             out.print(obj);
         }
         obj.put("response", "POST route doesn't exist");
-
     }
     public void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
         PrintWriter err = response.getWriter();
