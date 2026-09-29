@@ -1,10 +1,11 @@
 Sprint 5:
 
 methode d'action retourne String
-parametre : Model
+parametre : ModelAndView
 
 creation methode
-    setAttribute(Map)
+    setAttributes(Map)
+    addAttribute("attribute", object)
 
 String Object
 miantso map.put
