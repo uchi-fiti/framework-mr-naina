@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
 import jakarta.servlet.annotation.WebListener;
@@ -39,9 +40,10 @@ public class UContextListener implements ServletContextListener {
     @Override
     public void contextInitialized(ServletContextEvent sce) {
         init();
-        sce.getServletContext().setAttribute("controllersName", controllersName);
-        sce.getServletContext().setAttribute("mappings", mappings);
-        sce.getServletContext().setAttribute("exception", exception);
+        ServletContext context = sce.getServletContext();
+        context.setAttribute("controllersName", controllersName);
+        context.setAttribute("mappings", mappings);
+        context.setAttribute("exception", exception);
         // Code here runs exactly ONCE when the web app starts up
         System.out.println("-----------------------------------");
         System.out.println("Web application is starting up...");
