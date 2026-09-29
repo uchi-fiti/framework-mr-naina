@@ -21,8 +21,8 @@ public class FrontControllerServlet extends HttpServlet {
     private List <String> controllersName = new ArrayList<>();
     private Map <UrlMethod, Mapping> mappings = new HashMap<>();
     private Exception exception = null;
-    @Override
-    // TODO: raha efa misy ilay route de mi-throw exception
+    // TSY MILA init satria efa misy anle context listener
+    @Override 
     public void init() {
         controllersName = (List<String>) getServletContext().getAttribute("controllersName");
         mappings = (Map<UrlMethod, Mapping>) getServletContext().getAttribute("mappings");
