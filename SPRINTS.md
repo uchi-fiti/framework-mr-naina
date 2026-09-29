@@ -36,7 +36,7 @@ Sprint 5 bis:
 <listener>
     <listener-class>org.springframework.web.context.ContextLoaderListener</listener-class>
 </listener>
-- Comment avoir un instance d'un container  spring ?
+- Comment avoir une instance d'un container spring ?
 
 Sprint 6:
 - atao dispo API le methode
