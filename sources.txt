@@ -8,4 +8,5 @@ uchi/utils/MethodEnum.java
 uchi/exceptions/DuplicateRouteException.java
 uchi/exceptions/NoSuchRouteException.java
 uchi/annotations/UController.java
+uchi/annotations/ResponseBody.java
 uchi/annotations/UrlMapping.java
