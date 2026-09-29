@@ -45,3 +45,5 @@ Sprint 6:
 - sinon raha String de tode iny fotsiny no printena
 
 ...upload fichiers, session
+
+DONE

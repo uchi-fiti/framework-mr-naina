@@ -10,7 +10,9 @@ import jakarta.servlet.RequestDispatcher;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpServletRequest;
+import uchi.annotations.ResponseBody;
 import uchi.exceptions.NoSuchRouteException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import uchi.utils.Mapping;
 import uchi.utils.MethodEnum;
 import uchi.utils.ModelAndView;
@@ -77,11 +79,11 @@ public class FrontControllerServlet extends HttpServlet {
         System.out.println("Context pathhh: " + contextPath);
         String url = request.getRequestURL().toString();
         PrintWriter out = response.getWriter();
-        out.println("L'url complet est: " + url);
+        // out.println("L'url complet est: " + url);
         if(controllersName.size() > 0) {
-            out.println("Nom complet des controllers: ");
+            // out.println("Nom complet des controllers: ");
             for (String name : controllersName) {
-                out.println(name);
+                // out.println(name);
             }
         }
         String methodStr = request.getMethod();
@@ -90,8 +92,8 @@ public class FrontControllerServlet extends HttpServlet {
         System.out.println("Path infooooo: " + route );
         Mapping m = mappings.getOrDefault(new UrlMethod(route, methodEnum), null);
         if (m != null) {
-            out.println("La route existe !");
-            out.println("Route: " + route + ", Fonction: " + m.getMethod().getName() + ", Controller: " + m.getController().getName());
+            // out.println("La route existe !");
+            // out.println("Route: " + route + ", Fonction: " + m.getMethod().getName() + ", Controller: " + m.getController().getName());
             Class <?> returnType = m.getMethod().getReturnType();
             Class <?>[] parameterTypes = m.getMethod().getParameterTypes();
             Object objectInstance = m.getController().getDeclaredConstructor().newInstance();
@@ -99,14 +101,25 @@ public class FrontControllerServlet extends HttpServlet {
             if (parameterTypes.length == 0) {            
                 if(returnType == void.class) {
                     m.getMethod().invoke(objectInstance);
-                    out.println("Function with void return type called !");
+                    // out.println("Function with void return type called !");
                 } else {
                     // reminder: raha miantso method.invoke aho dia ilay parametre voalohany ilay objet izay ny classeny manana an'io fonction io
                     // de antsoina ao anatin'io objet io ilay fonction
                     // eto izao ilay controller ilay objet, de manana fonction tsy manana parametre izy fa eto ModelAndView ny type de retour-ny ndraindray
                     Object obj = m.getMethod().invoke(objectInstance);
-                    out.println("Function called ! Returned : " + obj.toString());
-                    if(obj instanceof ModelAndView) {
+                    // out.println("Function called ! Returned : " + obj.toString());
+                    if(m.getMethod().isAnnotationPresent(ResponseBody.class)) {
+                        response.setContentType("application/json");
+
+                        if(obj instanceof String){
+                            response.getWriter().write((String) obj);
+                        } else {
+
+                            ObjectMapper mapper = new ObjectMapper();
+                            String json = mapper.writeValueAsString(obj);
+                            response.getWriter().write(json);
+                        }
+                    } else if(obj instanceof ModelAndView) {
                         String prefix = getServletContext().getInitParameter("prefix");
                         String suffix = getServletContext().getInitParameter("suffix");
                         ModelAndView mv = (ModelAndView) obj;
@@ -127,7 +140,7 @@ public class FrontControllerServlet extends HttpServlet {
                 }
             } // else ... (tantara hafa mihitsy satria ilay route lo tsy maintsy misy parametre vao tokony hisy parametre ilay fonction ho antsoina)
 
-            out.println("Arrived here !");
+            // out.println("Arrived here !");
         } else {
             throw new NoSuchRouteException(route, methodEnum, mappings);
         }
