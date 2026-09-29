@@ -6,14 +6,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import jakarta.servlet.RequestDispatcher;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpServletRequest;
-import uchi.exceptions.DuplicateRouteException;
 import uchi.exceptions.NoSuchRouteException;
 import uchi.utils.Mapping;
 import uchi.utils.MethodEnum;
-import uchi.utils.UScanner;
+import uchi.utils.ModelAndView;
 import uchi.utils.UrlMethod;
 import org.json.JSONObject;
 
@@ -69,7 +69,12 @@ public class FrontControllerServlet extends HttpServlet {
         if(exception != null) {
             throw exception;
         }
+        System.out.println(
+    "FrontController received: "
+    + request.getRequestURI()
+);
         String contextPath = request.getContextPath();
+        System.out.println("Context pathhh: " + contextPath);
         String url = request.getRequestURL().toString();
         PrintWriter out = response.getWriter();
         out.println("L'url complet est: " + url);
@@ -81,7 +86,8 @@ public class FrontControllerServlet extends HttpServlet {
         }
         String methodStr = request.getMethod();
         MethodEnum methodEnum = methodStr.equalsIgnoreCase("get") ? MethodEnum.GET : MethodEnum.POST;
-        String route = request.getRequestURI().replace(contextPath, "");
+        String route = request.getPathInfo();
+        System.out.println("Path infooooo: " + route );
         Mapping m = mappings.getOrDefault(new UrlMethod(route, methodEnum), null);
         if (m != null) {
             out.println("La route existe !");
@@ -89,13 +95,35 @@ public class FrontControllerServlet extends HttpServlet {
             Class <?> returnType = m.getMethod().getReturnType();
             Class <?>[] parameterTypes = m.getMethod().getParameterTypes();
             Object objectInstance = m.getController().getDeclaredConstructor().newInstance();
-            if (parameterTypes.length == 0) {
+
+            if (parameterTypes.length == 0) {            
                 if(returnType == void.class) {
                     m.getMethod().invoke(objectInstance);
                     out.println("Function with void return type called !");
                 } else {
+                    // reminder: raha miantso method.invoke aho dia ilay parametre voalohany ilay objet izay ny classeny manana an'io fonction io
+                    // de antsoina ao anatin'io objet io ilay fonction
+                    // eto izao ilay controller ilay objet, de manana fonction tsy manana parametre izy fa eto ModelAndView ny type de retour-ny ndraindray
                     Object obj = m.getMethod().invoke(objectInstance);
                     out.println("Function called ! Returned : " + obj.toString());
+                    if(obj instanceof ModelAndView) {
+                        String prefix = getServletContext().getInitParameter("prefix");
+                        String suffix = getServletContext().getInitParameter("suffix");
+                        ModelAndView mv = (ModelAndView) obj;
+                        
+                        String view = prefix + mv.getView() + suffix;
+                        System.out.println("View that you are being redirected at my guy: " + view);
+
+                        if (mv.getAttributes() != null) {
+                            for (Map.Entry<String, Object> entry : mv.getAttributes().entrySet()) {
+                                request.setAttribute(entry.getKey(), entry.getValue());
+                            }
+                        }
+
+                        RequestDispatcher dispat = request.getRequestDispatcher(view);
+                        dispat.forward(request, response);
+                    }
+
                 }
             } // else ... (tantara hafa mihitsy satria ilay route lo tsy maintsy misy parametre vao tokony hisy parametre ilay fonction ho antsoina)
 
