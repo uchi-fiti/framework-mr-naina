@@ -1,4 +1,4 @@
-Sprint 5:
+# Sprint 5:
 
 methode d'action retourne String
 parametre : ModelAndView
@@ -38,7 +38,7 @@ Sprint 5 bis:
 </listener>
 - Comment avoir une instance d'un container spring ?
 
-Sprint 6:
+# Sprint 6: 4 octobre
 - atao dispo API le methode
 - annotation pour que methode mamerina json
 - refa ataony Object na zavatra hafa le type de retour de coté framework mamadika azy ho JSON (atao toJson)
@@ -46,4 +46,40 @@ Sprint 6:
 
 ...upload fichiers, session
 
-DONE
+# Sprint 7: binding 11 octobre
+- formulaire
+- matchena ilay request.getParameter sy ny parametres an'ilay methode
+- request.getParameter <-> anararanle parametre anle fonction voaantso
+- atao null par defaut ny valeur nle parametre
+
+Next: aona zany ny anaovana anle objet ary?
+
+# Sprint 7 bis: binding objet 
+- mety misy argument objet: ohatra hoe Employe
+
+Les methodes des controllers peuvent prendre des Objets comme arguemnt
+Mais aussi des listes d'objets, ou des Objets ayant des attributs Objets ou de liste d'objets 
+
+exemple 
+
+class Personne {
+
+String nom;
+List<Pseudo> pseudos;
+
+}
+
+avec :
+
+class Pseudo {
+  String libelle
+}
+doit marcher
+donc on doit pouvoir faire 
+
+ModelView test(List<String> randomArg, Personne p, String randomInput) par exemple
+
+# Sprint 8: upload fichiers:
+
+- class MapFile avec attribut nom fichier, extension du fichier, de array ana byte (byte [])
+- de raha misy attribut MapFile ny classe ray 

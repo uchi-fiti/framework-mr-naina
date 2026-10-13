@@ -7,6 +7,7 @@ uchi/utils/UScanner.java
 uchi/utils/MethodEnum.java
 uchi/exceptions/DuplicateRouteException.java
 uchi/exceptions/NoSuchRouteException.java
+uchi/exceptions/IllegalParameterException.java
 uchi/annotations/UController.java
 uchi/annotations/ResponseBody.java
 uchi/annotations/UrlMapping.java
