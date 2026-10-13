@@ -1,23 +1,27 @@
 package uchi.servlet;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.lang.reflect.Parameter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import jakarta.servlet.RequestDispatcher;
+import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import uchi.annotations.ResponseBody;
+import uchi.exceptions.IllegalParameterException;
 import uchi.exceptions.NoSuchRouteException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import uchi.utils.Mapping;
 import uchi.utils.MethodEnum;
 import uchi.utils.ModelAndView;
 import uchi.utils.UrlMethod;
-import org.json.JSONObject;
 
 public class FrontControllerServlet extends HttpServlet {
     private List <String> controllersName = new ArrayList<>();
@@ -31,29 +35,16 @@ public class FrontControllerServlet extends HttpServlet {
         exception = (Exception) getServletContext().getAttribute("exception");
     }
     public void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException {
-        JSONObject obj = new JSONObject();
-        PrintWriter out = response.getWriter();
-
-        String contextPath = request.getContextPath();
-        // String url = request.getRequestURL().toString();
-        String route = request.getRequestURI().replace(contextPath, "");
-        MethodEnum methodEnum = MethodEnum.POST;
-        response.setContentType("application/json");
-        response.setCharacterEncoding("UTF-8");
-        if(mappings.containsKey(new UrlMethod(route, methodEnum))) {
-            Mapping mapping = mappings.get(new UrlMethod(route, methodEnum));
-            obj.put("response", "POST route exists !");
-            obj.put("route", route);
-            Map <String, Object> mapFunction = new HashMap<>();
-            mapFunction.put("nom", mapping.getMethod().getName());
-            mapFunction.put("typeDeRetour", mapping.getMethod().getReturnType().getName());
-            mapFunction.put("nombreDeParametres", String.valueOf(mapping.getMethod().getParameterCount()));
-            mapFunction.put("typeDesParametres", mapping.getMethod().getParameterTypes());
-            obj.put("fonction", mapFunction);
-            obj.put("controller", mapping.getController().getName());
-            out.print(obj);
+        PrintWriter err = response.getWriter();
+        try {
+            processRequest(request, response);
+        } catch (NoSuchRouteException e) {
+            err.print(e);
+        } catch (Exception e) {
+            err.print(e);
+            e.printStackTrace();
         }
-        obj.put("response", "POST route doesn't exist");
+        err.flush();
     }
     public void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
         PrintWriter err = response.getWriter();
@@ -71,79 +62,103 @@ public class FrontControllerServlet extends HttpServlet {
         if(exception != null) {
             throw exception;
         }
-        System.out.println(
-    "FrontController received: "
-    + request.getRequestURI()
-);
-        String contextPath = request.getContextPath();
-        System.out.println("Context pathhh: " + contextPath);
-        String url = request.getRequestURL().toString();
-        PrintWriter out = response.getWriter();
-        // out.println("L'url complet est: " + url);
-        if(controllersName.size() > 0) {
-            // out.println("Nom complet des controllers: ");
-            for (String name : controllersName) {
-                // out.println(name);
-            }
-        }
+        Mapping m = getRequestMapping(request, mappings);
+        Method method = m.getMethod();
+        Object objectInstance = createController(m);
+
+        Object [] parameterValues = resolveMethodParameterValues(request, method);
+
+        Object retour = method.invoke(objectInstance, parameterValues);
+
+        handleControllerMethodResult(request, response, method, retour);
+    }
+    Mapping getRequestMapping(HttpServletRequest request, Map<UrlMethod, Mapping> mappings) throws NoSuchRouteException {
         String methodStr = request.getMethod();
         MethodEnum methodEnum = methodStr.equalsIgnoreCase("get") ? MethodEnum.GET : MethodEnum.POST;
         String route = request.getPathInfo();
-        System.out.println("Path infooooo: " + route );
-        Mapping m = mappings.getOrDefault(new UrlMethod(route, methodEnum), null);
-        if (m != null) {
-            // out.println("La route existe !");
-            // out.println("Route: " + route + ", Fonction: " + m.getMethod().getName() + ", Controller: " + m.getController().getName());
-            Class <?> returnType = m.getMethod().getReturnType();
-            Class <?>[] parameterTypes = m.getMethod().getParameterTypes();
-            Object objectInstance = m.getController().getDeclaredConstructor().newInstance();
-
-            if (parameterTypes.length == 0) {            
-                if(returnType == void.class) {
-                    m.getMethod().invoke(objectInstance);
-                    // out.println("Function with void return type called !");
-                } else {
-                    // reminder: raha miantso method.invoke aho dia ilay parametre voalohany ilay objet izay ny classeny manana an'io fonction io
-                    // de antsoina ao anatin'io objet io ilay fonction
-                    // eto izao ilay controller ilay objet, de manana fonction tsy manana parametre izy fa eto ModelAndView ny type de retour-ny ndraindray
-                    Object obj = m.getMethod().invoke(objectInstance);
-                    // out.println("Function called ! Returned : " + obj.toString());
-                    if(m.getMethod().isAnnotationPresent(ResponseBody.class)) {
-                        response.setContentType("application/json");
-
-                        if(obj instanceof String){
-                            response.getWriter().write((String) obj);
-                        } else {
-
-                            ObjectMapper mapper = new ObjectMapper();
-                            String json = mapper.writeValueAsString(obj);
-                            response.getWriter().write(json);
-                        }
-                    } else if(obj instanceof ModelAndView) {
-                        String prefix = getServletContext().getInitParameter("prefix");
-                        String suffix = getServletContext().getInitParameter("suffix");
-                        ModelAndView mv = (ModelAndView) obj;
-                        
-                        String view = prefix + mv.getView() + suffix;
-                        System.out.println("View that you are being redirected at my guy: " + view);
-
-                        if (mv.getAttributes() != null) {
-                            for (Map.Entry<String, Object> entry : mv.getAttributes().entrySet()) {
-                                request.setAttribute(entry.getKey(), entry.getValue());
-                            }
-                        }
-
-                        RequestDispatcher dispat = request.getRequestDispatcher(view);
-                        dispat.forward(request, response);
-                    }
-
-                }
-            } // else ... (tantara hafa mihitsy satria ilay route lo tsy maintsy misy parametre vao tokony hisy parametre ilay fonction ho antsoina)
-
-            // out.println("Arrived here !");
+        Mapping m = mappings.get(new UrlMethod(route, methodEnum));
+        if(m != null) {
+            return m;
         } else {
             throw new NoSuchRouteException(route, methodEnum, mappings);
         }
-        out.flush();
     }
+    Object [] resolveMethodParameterValues(HttpServletRequest request, Method method) throws IllegalParameterException {
+        Parameter[] parameters = method.getParameters();
+        Object [] values = new Object[parameters.length];
+        int i = 0;
+        for(Parameter p : parameters) {
+            values[i] = convertParameterValue(request.getParameter(p.getName()), p.getType());
+            i++;
+        }
+        return values;
+    }
+    Object convertParameterValue(String value, Class <?> type) throws IllegalParameterException {
+        if(type == String.class) {
+            return value;
+        } 
+        if(type == int.class || type == Integer.class) {
+            try {
+                return Integer.parseInt(value);
+            } catch (NumberFormatException e) {
+                throw new IllegalParameterException(
+                    "Invalid integer value: " + value
+                );
+            }
+        }
+        if(type == long.class || type == Long.class) {
+            try {
+                return Long.parseLong(value);
+            } catch(NumberFormatException e) {
+                 throw new IllegalParameterException(
+                    "Invalid long value: " + value
+                );
+            }
+        }
+        if(type == double.class || type == Double.class) {
+            try {
+                return Double.parseDouble(value);
+            } catch(NumberFormatException e) {
+                 throw new IllegalParameterException(
+                    "Invalid double value: " + value
+                );
+            }
+        }
+        throw new IllegalParameterException("Type de paramètre non encore prise en charge: " + type.getName());
+    }
+    void handleControllerMethodResult(HttpServletRequest request, HttpServletResponse response, Method method, Object retour) throws ServletException, IOException {
+        if(retour instanceof ModelAndView) {
+            String prefix = getServletContext().getInitParameter("prefix");
+            String suffix = getServletContext().getInitParameter("suffix");
+            ModelAndView mv = (ModelAndView) retour;
+            
+            String view = prefix + mv.getView() + suffix;
+
+            if (mv.getAttributes() != null) {
+                for (Map.Entry<String, Object> entry : mv.getAttributes().entrySet()) {
+                    request.setAttribute(entry.getKey(), entry.getValue());
+                }
+            }
+
+            RequestDispatcher dispat = request.getRequestDispatcher(view);
+            dispat.forward(request, response);
+        } else if(method.isAnnotationPresent(ResponseBody.class)) {
+            PrintWriter out = response.getWriter();
+            response.setContentType("application/json");
+
+            if(retour instanceof String){
+                out.write((String) retour);
+            } else {
+                ObjectMapper mapper = new ObjectMapper();
+                String json = mapper.writeValueAsString(retour);
+                out.write(json);
+            }
+        } 
+    }
+
+    Object createController(Mapping m) throws InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException {
+        return m.getController().getDeclaredConstructor().newInstance();
+    }
+
+
 }
