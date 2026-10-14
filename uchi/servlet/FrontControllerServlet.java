@@ -1,10 +1,14 @@
 package uchi.servlet;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.util.ArrayList;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -68,6 +72,31 @@ public class FrontControllerServlet extends HttpServlet {
 
         Object [] parameterValues = resolveMethodParameterValues(request, method);
 
+        for (Object object : parameterValues) {
+            if(!isSimpleType(object.getClass())) {
+                for (Field field : object.getClass().getDeclaredFields()) {
+                    try {
+                        String fieldName = field.getName();
+
+                        // Construct getter name: name -> getName
+                        String getterName = "get"
+                                + Character.toUpperCase(fieldName.charAt(0))
+                                + fieldName.substring(1);
+
+                        // Find and invoke getter
+                        Method getter = object.getClass().getMethod(getterName);
+                        Object value = getter.invoke(object);
+
+                        System.out.println(fieldName + " = " + value);
+
+                    } catch (Exception e) {
+                        System.out.println(field.getName()
+                                + " : " + e.getMessage());
+                    }
+                }
+            }       
+        }
+
         Object retour = method.invoke(objectInstance, parameterValues);
 
         handleControllerMethodResult(request, response, method, retour);
@@ -83,17 +112,121 @@ public class FrontControllerServlet extends HttpServlet {
             throw new NoSuchRouteException(route, methodEnum, mappings);
         }
     }
-    Object [] resolveMethodParameterValues(HttpServletRequest request, Method method) throws IllegalParameterException {
+    String upperCaseFirstLetter(String text) {
+        return Character.toUpperCase(text.charAt(0)) + text.substring(1);
+    }
+    Object [] resolveMethodParameterValues(HttpServletRequest request, Method method) throws Exception {
         Parameter[] parameters = method.getParameters();
         Object [] values = new Object[parameters.length];
         int i = 0;
         for(Parameter p : parameters) {
-            values[i] = convertParameterValue(request.getParameter(p.getName()), p.getType());
+            Object v = null;
+            if(isSimpleType(p.getType())) {
+
+                v = convertParameterValue(request.getParameter(p.getName()), p.getType());
+
+            }  else if (List.class.isAssignableFrom(p.getType())) {
+
+                v = resolveList(request, p.getParameterizedType(), p.getName());
+
+            } else {
+
+                v = resolveObject(request, p.getType(), p.getName());
+
+            }
+            values[i] = v;
             i++;
         }
         return values;
     }
-    Object convertParameterValue(String value, Class <?> type) throws IllegalParameterException {
+    Object resolveObject(HttpServletRequest request, Class<?> type, String prefix) throws Exception {
+
+        Object instance = type.getDeclaredConstructor().newInstance();
+
+        for (Field f : type.getDeclaredFields()) {
+            String fieldName = f.getName();
+            String fullName = prefix + "." + fieldName;
+
+            Object value = null;
+
+            if (isSimpleType(f.getType())) {
+                String rawValue = request.getParameter(fullName);
+
+                if (rawValue == null) {
+                    continue;
+                }
+
+                value = convertParameterValue(rawValue, f.getType());
+
+            } else if(List.class.isAssignableFrom(f.getType())) { 
+
+                value = resolveList(request, f.getGenericType(), fullName);
+
+            } else {
+
+                value = resolveObject(request, f.getType(), fullName);
+
+            }
+
+            String setterName = "set" + upperCaseFirstLetter(fieldName);
+            Method setter = type.getMethod(setterName, f.getType());
+
+            setter.invoke(instance, value);
+        }
+
+        return instance;
+    }
+
+
+    Object resolveList(HttpServletRequest request, Type type, String prefix) throws Exception {
+
+        ParameterizedType parameterizedType = (ParameterizedType) type;
+
+        Type elementType = parameterizedType.getActualTypeArguments()[0];
+        Class<?> elementClass = (Class<?>) elementType;
+
+        List<Object> values = new ArrayList<>();
+
+        int i = 0;
+
+        while (hasParameterWithPrefix(request, prefix + "[" + i + "]")) {
+
+            String elementName = prefix + "[" + i + "]";
+
+            Object value;
+
+            if (isSimpleType(elementClass)) {
+
+                value = convertParameterValue(request.getParameter(elementName), elementClass);
+
+            } else {
+
+                value = resolveObject(request, elementClass, elementName);
+
+            }
+
+            values.add(value);
+            i++;
+        }
+
+        return values;
+    }
+    boolean hasParameterWithPrefix(HttpServletRequest request, String prefix) {
+        Enumeration<String> names = request.getParameterNames();
+
+        while (names.hasMoreElements()) {
+            String name = names.nextElement();
+
+            if (name.equals(prefix)
+                    || name.startsWith(prefix + ".")
+                    || name.startsWith(prefix + "[")) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+    Object convertParameterValue(String value, Class <?> type) throws IllegalParameterException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException {
         if(type == String.class) {
             return value;
         } 
@@ -124,7 +257,8 @@ public class FrontControllerServlet extends HttpServlet {
                 );
             }
         }
-        throw new IllegalParameterException("Type de paramètre non encore prise en charge: " + type.getName());
+
+        return  null;
     }
     void handleControllerMethodResult(HttpServletRequest request, HttpServletResponse response, Method method, Object retour) throws ServletException, IOException {
         if(retour instanceof ModelAndView) {
@@ -160,5 +294,11 @@ public class FrontControllerServlet extends HttpServlet {
         return m.getController().getDeclaredConstructor().newInstance();
     }
 
+    boolean isSimpleType(Class<?> type) {
+        return type == String.class
+            || type == int.class || type == Integer.class
+            || type == long.class || type == Long.class
+            || type == double.class || type == Double.class;
+    }
 
 }

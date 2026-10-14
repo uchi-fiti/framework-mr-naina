@@ -8,4 +8,16 @@ Fonctionnalités actuelles:
     - si oui, le framwork appelle la méthode associé à cette url
     - sinon, le framework affiche tous les routes disponibles 
 
- > 💡 Actuellement, le framework ne gère pas les routes et les fonctions avec des paramètres, quoiqu' il faut se projeter là dessus puisque c'est peut être un prochain sprint.
+
+- Convention de nommage des champs de formulaire (Sprint 7 bis) :
+  - Pour les paramètres simples (`String`, `Integer`, etc.), le `name` de l'input doit correspondre au nom du paramètre de la méthode.
+    - Exemple : `String nom` → `name="nom"`
+  - Pour les paramètres de type Objet, le `name` doit suivre le format `nomParametre.nomAttribut`.
+    - Exemple : `Personne p` → `name="p.nom"`
+  - Pour les Objets ayant des attributs de type Objet, on utilise un point (`.`) pour accéder aux attributs.
+    - Exemple : `p.adresse.ville` → `name="p.adresse.ville"`
+  - Pour les listes, on utilise des crochets (`[]`) avec l'indice de l'élément, en commençant par 0.
+    - Exemple : `List<String> noms` → `name="noms[0]"`, `name="noms[1]"`
+  - Pour les listes d'Objets, on combine les crochets et les points.
+    - Exemple : `List<Pseudo> pseudos` → `name="pseudos[0].libelle"`
+  - Cette convention permet au framework d'associer automatiquement les valeurs des formulaires aux paramètres des méthodes des controllers, même pour les Objets et les listes imbriqués.
