@@ -81,5 +81,6 @@ ModelView test(List<String> randomArg, Personne p, String randomInput) par exemp
 
 # Sprint 8: upload fichiers:
 
-- class MapFile avec attribut nom fichier, extension du fichier, de array ana byte (byte [])
-- de raha misy attribut MapFile ny classe ray 
+- si on veut uploader un fichier avec un formulaire, l'input avec le type "file" va correspondre au paramètre de fonction MapFile
+- MapFile est une classe avec les attributs: String nomFichier, String extensionFichier et byte [] contenuFichier
+- on sauvegarde le fichier localement suivant une localisation déclarée dans un fichier de configuration (comme web.xml ou un fichier custom de notre choix, comme nom_du_projet.properties par exemple)
