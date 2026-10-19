@@ -84,3 +84,12 @@ ModelView test(List<String> randomArg, Personne p, String randomInput) par exemp
 - si on veut uploader un fichier avec un formulaire, l'input avec le type "file" va correspondre au paramètre de fonction MapFile
 - MapFile est une classe avec les attributs: String nomFichier, String extensionFichier et byte [] contenuFichier
 - on sauvegarde le fichier localement suivant une localisation déclarée dans un fichier de configuration (comme web.xml ou un fichier custom de notre choix, comme nom_du_projet.properties par exemple)
+
+# Sprint 9
+Atao disponible anaty controller lay session Utilisateur
+Creer Class Mysession 
+    - Map<String , Object> 
+    - Method utilitaire pour recuperer ou ajouter variable
+Refa mahita an iny ny framework atsika dia injectena
+
+Rehefa vita ny invoke dia atao mis a jour ny session 
