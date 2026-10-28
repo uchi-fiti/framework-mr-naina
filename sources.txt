@@ -11,5 +11,6 @@ uchi/exceptions/DuplicateRouteException.java
 uchi/exceptions/NoSuchRouteException.java
 uchi/exceptions/IllegalParameterException.java
 uchi/annotations/UController.java
+uchi/annotations/Auth.java
 uchi/annotations/ResponseBody.java
 uchi/annotations/UrlMapping.java

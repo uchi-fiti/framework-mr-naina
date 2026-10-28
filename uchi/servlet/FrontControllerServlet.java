@@ -17,6 +17,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpServletRequest;
+import uchi.annotations.Auth;
 import uchi.annotations.ResponseBody;
 import uchi.exceptions.IllegalParameterException;
 import uchi.exceptions.NoSuchRouteException;
@@ -35,12 +36,24 @@ public class FrontControllerServlet extends HttpServlet {
     private List <String> controllersName = new ArrayList<>();
     private Map <UrlMethod, Mapping> mappings = new HashMap<>();
     private Exception exception = null;
+    private String authSessionKey = null;
     // TSY MILA init satria efa misy anle context listener
     @Override 
-    public void init() {
+    public void init() throws ServletException {
+        super.init();
         controllersName = (List<String>) getServletContext().getAttribute("controllersName");
         mappings = (Map<UrlMethod, Mapping>) getServletContext().getAttribute("mappings");
         exception = (Exception) getServletContext().getAttribute("exception");
+
+        authSessionKey = getServletContext().getInitParameter("auth.session.key");
+
+        if (authSessionKey == null || authSessionKey.isBlank()) {
+            throw new ServletException(
+                "Configuration manquante : auth.session.key"
+            );
+        }
+
+        authSessionKey = authSessionKey.trim();
     }
     public void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException {
         PrintWriter err = response.getWriter();
@@ -77,34 +90,27 @@ public class FrontControllerServlet extends HttpServlet {
         request.setAttribute("controllerBaseUrl", controllerBaseUrl);
         Mapping m = getRequestMapping(request, mappings);
         Method method = m.getMethod();
-        Object objectInstance = createController(m);
 
-        Object [] parameterValues = resolveMethodParameterValues(request, method);
-        // debugging Object parameter
-        for (Object object : parameterValues) {
-            if(!isSimpleType(object.getClass())) {
-                for (Field field : object.getClass().getDeclaredFields()) {
-                    try {
-                        String fieldName = field.getName();
 
-                        // Construct getter name: name -> getName
-                        String getterName = "get"
-                                + upperCaseFirstLetter(fieldName);
+        if (method.isAnnotationPresent(Auth.class)) {
 
-                        // Find and invoke getter
-                        Method getter = object.getClass().getMethod(getterName);
-                        Object value = getter.invoke(object);
+            if (!isAuthenticated(request)) {
 
-                        System.out.println(fieldName + " = " + value);
+                response.sendError(
+                    HttpServletResponse.SC_UNAUTHORIZED,
+                    "Vous devez être authentifié pour accéder à cette page."
+                );
 
-                    } catch (Exception e) {
-                        System.out.println(field.getName()
-                                + " : " + e.getMessage());
-                    }
-                }
-            }       
+                return;
+            }
         }
+        
+        
+        Object objectInstance = createController(m);
+        
+        Object [] parameterValues = resolveMethodParameterValues(request, method);
 
+        
         Object retour = method.invoke(objectInstance, parameterValues);
 
         handleControllerMethodResult(request, response, method, retour);
@@ -439,5 +445,24 @@ public class FrontControllerServlet extends HttpServlet {
         }
 
         return uSession;
-}
+    }
+    boolean isAuthenticated(HttpServletRequest request) {
+
+        HttpSession httpSession = request.getSession(false);
+
+        if (httpSession == null) {
+            return false;
+        }
+
+        USession uSession =
+            (USession) httpSession.getAttribute("USession");
+
+        if (uSession == null) {
+            return false;
+        }
+
+        Object value = uSession.get(authSessionKey);
+
+        return value != null;   
+    }
 }
