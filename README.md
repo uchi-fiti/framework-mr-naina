@@ -63,7 +63,7 @@ Fonctionnalités actuelles :
 - Rôles
   - Vous pouvez aussi protéger les routes pour que seulement les utilisateurs connectés et les utilisateurs avec des rôles spécifiques puissent y accéder
   - Vous pouvez faire ça en ajoutant à l'annotation @Auth la liste des seuls rôles qui peuvent accéder à votre route
-  Exemple: `@Auth(roles = {"admin", manager})
+  Exemple: `@Auth(roles = {"admin", manager})`
   - Il faut une dernière petite configuration
   - Il faut dire au framework quelle clé de session vérifier
   - Donc créer un nouveau paramètre de contexte `role.session.key` qui va avoir comme valeur la clé de session que vous avez créez pour stocker la rôle actuelle
