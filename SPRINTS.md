@@ -81,5 +81,28 @@ ModelView test(List<String> randomArg, Personne p, String randomInput) par exemp
 
 # Sprint 8: upload fichiers:
 
-- class MapFile avec attribut nom fichier, extension du fichier, de array ana byte (byte [])
-- de raha misy attribut MapFile ny classe ray 
+- si on veut uploader un fichier avec un formulaire, l'input avec le type "file" va correspondre au paramètre de fonction MapFile
+- MapFile est une classe avec les attributs: String nomFichier, String extensionFichier et byte [] contenuFichier
+- on sauvegarde le fichier localement suivant une localisation déclarée dans un fichier de configuration (comme web.xml ou un fichier custom de notre choix, comme nom_du_projet.properties par exemple)
+
+# Sprint 9
+les sessions doivent être disponible dans les controllers
+Creer classe session personnaliseé (USession)
+    - Map<String , Object> 
+    - Methodes utilitaires pour recuperer ou ajouter variable (set, get, etc)
+Si le developpeur veut utiliser une session dans un controller, il doit la mettre en parametre
+Le framework s'en charge de "injecter" la session dans le controller pour que le developpeur a accès à ses valeurs 
+Comment stocker les valeurs?
+- request.getContext ou
+- request.getSession
+
+On met a jour la session dans invoke s'il y a des mis a jours (session.set())
+
+# Sprint 10
+- misy methode d'action any anaty Controller an'ny developpeur
+- tenenina hoe tsy maintsy connecté vao afaka mi-executer anle methode (authentifié)
+- asiana configuration anaty web.xml hoe inona no anaranle variable session jerena refa tina ho fantatra hoe authentifié ve le olona refa mapiasa anle methode
+- init-param anaty web.xml
+- de indray mande fotsiny alaina le izy zany hoe anaty fonction init    
+# Sprint 10 bis
+- tsy hoe connecté fotsiny fa tsy maintsy manana role specifique

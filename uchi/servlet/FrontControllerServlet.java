@@ -1,6 +1,4 @@
 package uchi.servlet;
-import java.io.IOException;
-import java.io.PrintWriter;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -12,7 +10,8 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
+import jakarta.servlet.http.HttpSession;
+import uchi.utils.USession;
 import jakarta.servlet.RequestDispatcher;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
@@ -22,6 +21,11 @@ import uchi.annotations.ResponseBody;
 import uchi.exceptions.IllegalParameterException;
 import uchi.exceptions.NoSuchRouteException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.servlet.http.Part;
+import java.io.*;
+import java.nio.file.*;
+import java.util.UUID;
+import uchi.utils.MapFile;
 import uchi.utils.Mapping;
 import uchi.utils.MethodEnum;
 import uchi.utils.ModelAndView;
@@ -66,12 +70,17 @@ public class FrontControllerServlet extends HttpServlet {
         if(exception != null) {
             throw exception;
         }
+        String controllerBaseUrl =
+        request.getContextPath() + request.getServletPath();
+        System.out.println("Controller base url: " + controllerBaseUrl);
+        
+        request.setAttribute("controllerBaseUrl", controllerBaseUrl);
         Mapping m = getRequestMapping(request, mappings);
         Method method = m.getMethod();
         Object objectInstance = createController(m);
 
         Object [] parameterValues = resolveMethodParameterValues(request, method);
-
+        // debugging Object parameter
         for (Object object : parameterValues) {
             if(!isSimpleType(object.getClass())) {
                 for (Field field : object.getClass().getDeclaredFields()) {
@@ -80,8 +89,7 @@ public class FrontControllerServlet extends HttpServlet {
 
                         // Construct getter name: name -> getName
                         String getterName = "get"
-                                + Character.toUpperCase(fieldName.charAt(0))
-                                + fieldName.substring(1);
+                                + upperCaseFirstLetter(fieldName);
 
                         // Find and invoke getter
                         Method getter = object.getClass().getMethod(getterName);
@@ -121,11 +129,21 @@ public class FrontControllerServlet extends HttpServlet {
         int i = 0;
         for(Parameter p : parameters) {
             Object v = null;
-            if(isSimpleType(p.getType())) {
+            if (p.getType() == USession.class) {
+
+                v = resolveUSession(request);
+
+            } else if(isSimpleType(p.getType())) {
 
                 v = convertParameterValue(request.getParameter(p.getName()), p.getType());
 
-            }  else if (List.class.isAssignableFrom(p.getType())) {
+            }  else if (p.getType() == MapFile.class) {
+
+                System.out.println(p.getName() + " is of type MapFile");
+
+                v = resolveMapFile(request, p.getName());
+
+            } else if (List.class.isAssignableFrom(p.getType())) {
 
                 v = resolveList(request, p.getParameterizedType(), p.getName());
 
@@ -301,4 +319,125 @@ public class FrontControllerServlet extends HttpServlet {
             || type == double.class || type == Double.class;
     }
 
+
+    // Converts an uploaded file into our MapFile object.
+    MapFile resolveMapFile(
+            HttpServletRequest request,
+            String parameterName
+    ) throws Exception {
+
+        Part part = request.getPart(parameterName);
+
+        if (part == null || part.getSubmittedFileName() == null
+                || part.getSubmittedFileName().isEmpty()) {
+            return null;
+        }
+
+        // Retrieve the original filename.
+        String originalName = part.getSubmittedFileName();
+
+        // Remove any client-supplied directory components.
+        originalName = originalName.replace('\\', '/');
+        originalName = originalName.substring(
+            originalName.lastIndexOf('/') + 1
+        );
+
+        // Separate filename and extension.
+        int dotIndex = originalName.lastIndexOf('.');
+
+        String nomFichier = originalName;
+        String extensionFichier = "";
+
+        if (dotIndex > 0) {
+            nomFichier = originalName.substring(0, dotIndex);
+            extensionFichier = originalName.substring(dotIndex + 1);
+        }
+
+        // Read file content into byte[].
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+
+        try (InputStream input = part.getInputStream()) {
+            byte[] buffer = new byte[8192];
+            int bytesRead;
+
+            while ((bytesRead = input.read(buffer)) != -1) {
+                output.write(buffer, 0, bytesRead);
+            }
+        }
+
+        byte[] contenuFichier = output.toByteArray();
+
+        MapFile file = new MapFile(
+            nomFichier,
+            extensionFichier,
+            contenuFichier
+        );
+
+        // Save the uploaded file.
+        saveMapFile(file);
+
+        return file;
+    }
+    void saveMapFile(MapFile file) throws IOException {
+
+        String directory = getServletContext()
+            .getInitParameter("upload.directory");
+
+        if (directory == null || directory.trim().isEmpty()) {
+            throw new IOException(
+                "Upload directory is not configured"
+            );
+        }
+
+        Path uploadDirectory = Paths.get(directory);
+
+        if (!uploadDirectory.isAbsolute()) {
+            throw new IOException(
+                "Upload directory must be an absolute path"
+            );
+        }
+
+        Files.createDirectories(uploadDirectory);
+
+        // Only accept simple filename extensions.
+        String extension = file.getExtensionFichier()
+            .toLowerCase(java.util.Locale.ROOT);
+
+        if (!extension.matches("[a-z0-9]{0,15}")) {
+            throw new IOException("Invalid file extension");
+        }
+
+        // Generate a unique filename to avoid collisions
+        // and avoid trusting the client-supplied filename.
+        String savedName = UUID.randomUUID().toString();
+
+        if (!extension.isEmpty()) {
+            savedName += "." + extension;
+        }
+
+        Path destination = uploadDirectory.resolve(savedName);
+
+        Files.write(
+            destination,
+            file.getContenuFichier(),
+            StandardOpenOption.CREATE_NEW
+        );
+
+        System.out.println("File saved to: " + destination);
+    }
+    USession resolveUSession(HttpServletRequest request) {
+
+        HttpSession httpSession = request.getSession();
+
+        USession uSession =
+            (USession) httpSession.getAttribute("USession");
+
+        if (uSession == null) {
+            uSession = new USession();
+
+            httpSession.setAttribute("USession", uSession);
+        }
+
+        return uSession;
+}
 }
