@@ -37,6 +37,7 @@ public class FrontControllerServlet extends HttpServlet {
     private Map <UrlMethod, Mapping> mappings = new HashMap<>();
     private Exception exception = null;
     private String authSessionKey = null;
+    private String roleSessionKey = null;
     // TSY MILA init satria efa misy anle context listener
     @Override 
     public void init() throws ServletException {
@@ -54,6 +55,16 @@ public class FrontControllerServlet extends HttpServlet {
         }
 
         authSessionKey = authSessionKey.trim();
+
+        roleSessionKey = getServletContext().getInitParameter("role.session.key");
+
+        if (roleSessionKey == null || roleSessionKey.isBlank()) {
+            throw new ServletException(
+                "Configuration manquante : role.session.key"
+            );
+        }
+
+        roleSessionKey = roleSessionKey.trim();
     }
     public void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException {
         PrintWriter err = response.getWriter();
@@ -92,17 +103,8 @@ public class FrontControllerServlet extends HttpServlet {
         Method method = m.getMethod();
 
 
-        if (method.isAnnotationPresent(Auth.class)) {
-
-            if (!isAuthenticated(request)) {
-
-                response.sendError(
-                    HttpServletResponse.SC_UNAUTHORIZED,
-                    "Vous devez être authentifié pour accéder à cette page."
-                );
-
-                return;
-            }
+        if (!checkAuthorization(request, response, method)) {
+            return;
         }
         
         
@@ -464,5 +466,66 @@ public class FrontControllerServlet extends HttpServlet {
         Object value = uSession.get(authSessionKey);
 
         return value != null;   
+    }
+    boolean checkAuthorization(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            Method method
+    ) throws IOException {
+
+        // 1. Check if the method is protected.
+        Auth auth = method.getAnnotation(Auth.class);
+
+        if (auth == null) {
+            return true;
+        }
+
+        // 2. Retrieve the existing HTTP session.
+        HttpSession httpSession = request.getSession(false);
+
+        USession uSession = null;
+
+        if (httpSession != null) {
+            uSession = (USession) httpSession.getAttribute("USession");
+        }
+
+        // 3. Check authentication.
+        if (uSession == null ||
+                uSession.get(authSessionKey) == null) {
+
+            response.sendError(
+                HttpServletResponse.SC_UNAUTHORIZED,
+                "Vous devez être authentifié."
+            );
+
+            return false;
+        }
+
+        // 4. Retrieve the roles allowed by the annotation.
+        String[] allowedRoles = auth.roles();
+
+        // No specific roles: authentication is enough.
+        if (allowedRoles.length == 0) {
+            return true;
+        }
+
+        // 5. Retrieve the user's current role.
+        Object currentRole = uSession.get(roleSessionKey);
+
+        // 6. Check whether the user's role is allowed.
+        for (String role : allowedRoles) {
+
+            if (role.equals(currentRole)) {
+                return true;
+            }
+        }
+
+        // 7. Authenticated but insufficient permissions.
+        response.sendError(
+            HttpServletResponse.SC_FORBIDDEN,
+            "Vous n'avez pas le rôle nécessaire."
+        );
+
+        return false;
     }
 }
