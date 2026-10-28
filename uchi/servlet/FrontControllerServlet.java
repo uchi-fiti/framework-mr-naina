@@ -17,6 +17,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpServletRequest;
+import uchi.annotations.Auth;
 import uchi.annotations.ResponseBody;
 import uchi.exceptions.IllegalParameterException;
 import uchi.exceptions.NoSuchRouteException;
@@ -35,12 +36,35 @@ public class FrontControllerServlet extends HttpServlet {
     private List <String> controllersName = new ArrayList<>();
     private Map <UrlMethod, Mapping> mappings = new HashMap<>();
     private Exception exception = null;
+    private String authSessionKey = null;
+    private String roleSessionKey = null;
     // TSY MILA init satria efa misy anle context listener
     @Override 
-    public void init() {
+    public void init() throws ServletException {
+        super.init();
         controllersName = (List<String>) getServletContext().getAttribute("controllersName");
         mappings = (Map<UrlMethod, Mapping>) getServletContext().getAttribute("mappings");
         exception = (Exception) getServletContext().getAttribute("exception");
+
+        authSessionKey = getServletContext().getInitParameter("auth.session.key");
+
+        if (authSessionKey == null || authSessionKey.isBlank()) {
+            throw new ServletException(
+                "Configuration manquante : auth.session.key"
+            );
+        }
+
+        authSessionKey = authSessionKey.trim();
+
+        roleSessionKey = getServletContext().getInitParameter("role.session.key");
+
+        if (roleSessionKey == null || roleSessionKey.isBlank()) {
+            throw new ServletException(
+                "Configuration manquante : role.session.key"
+            );
+        }
+
+        roleSessionKey = roleSessionKey.trim();
     }
     public void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException {
         PrintWriter err = response.getWriter();
@@ -77,34 +101,18 @@ public class FrontControllerServlet extends HttpServlet {
         request.setAttribute("controllerBaseUrl", controllerBaseUrl);
         Mapping m = getRequestMapping(request, mappings);
         Method method = m.getMethod();
-        Object objectInstance = createController(m);
 
-        Object [] parameterValues = resolveMethodParameterValues(request, method);
-        // debugging Object parameter
-        for (Object object : parameterValues) {
-            if(!isSimpleType(object.getClass())) {
-                for (Field field : object.getClass().getDeclaredFields()) {
-                    try {
-                        String fieldName = field.getName();
 
-                        // Construct getter name: name -> getName
-                        String getterName = "get"
-                                + upperCaseFirstLetter(fieldName);
-
-                        // Find and invoke getter
-                        Method getter = object.getClass().getMethod(getterName);
-                        Object value = getter.invoke(object);
-
-                        System.out.println(fieldName + " = " + value);
-
-                    } catch (Exception e) {
-                        System.out.println(field.getName()
-                                + " : " + e.getMessage());
-                    }
-                }
-            }       
+        if (!checkAuthorization(request, response, method)) {
+            return;
         }
+        
+        
+        Object objectInstance = createController(m);
+        
+        Object [] parameterValues = resolveMethodParameterValues(request, method);
 
+        
         Object retour = method.invoke(objectInstance, parameterValues);
 
         handleControllerMethodResult(request, response, method, retour);
@@ -439,5 +447,85 @@ public class FrontControllerServlet extends HttpServlet {
         }
 
         return uSession;
-}
+    }
+    boolean isAuthenticated(HttpServletRequest request) {
+
+        HttpSession httpSession = request.getSession(false);
+
+        if (httpSession == null) {
+            return false;
+        }
+
+        USession uSession =
+            (USession) httpSession.getAttribute("USession");
+
+        if (uSession == null) {
+            return false;
+        }
+
+        Object value = uSession.get(authSessionKey);
+
+        return value != null;   
+    }
+    boolean checkAuthorization(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            Method method
+    ) throws IOException {
+
+        // 1. Check if the method is protected.
+        Auth auth = method.getAnnotation(Auth.class);
+
+        if (auth == null) {
+            return true;
+        }
+
+        // 2. Retrieve the existing HTTP session.
+        HttpSession httpSession = request.getSession(false);
+
+        USession uSession = null;
+
+        if (httpSession != null) {
+            uSession = (USession) httpSession.getAttribute("USession");
+        }
+
+        // 3. Check authentication.
+        if (uSession == null ||
+                uSession.get(authSessionKey) == null) {
+
+            response.sendError(
+                HttpServletResponse.SC_UNAUTHORIZED,
+                "Vous devez être authentifié."
+            );
+
+            return false;
+        }
+
+        // 4. Retrieve the roles allowed by the annotation.
+        String[] allowedRoles = auth.roles();
+
+        // No specific roles: authentication is enough.
+        if (allowedRoles.length == 0) {
+            return true;
+        }
+
+        // 5. Retrieve the user's current role.
+        Object currentRole = uSession.get(roleSessionKey);
+
+        // 6. Check whether the user's role is allowed.
+        for (String role : allowedRoles) {
+
+            if (role.equals(currentRole)) {
+                return true;
+            }
+        }
+
+        // 7. Authenticated but insufficient permissions.
+        response.sendError(
+            HttpServletResponse.SC_FORBIDDEN,
+            "Vous n'avez pas le rôle nécessaire."
+        );
+
+        return false;
+    }
 }

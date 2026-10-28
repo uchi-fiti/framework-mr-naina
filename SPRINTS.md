@@ -103,6 +103,11 @@ On met a jour la session dans invoke s'il y a des mis a jours (session.set())
 - tenenina hoe tsy maintsy connecté vao afaka mi-executer anle methode (authentifié)
 - asiana configuration anaty web.xml hoe inona no anaranle variable session jerena refa tina ho fantatra hoe authentifié ve le olona refa mapiasa anle methode
 - init-param anaty web.xml
-- de indray mande fotsiny alaina le izy zany hoe anaty fonction init    
+- de indray mande fotsiny alaina le izy zany hoe anaty fonction init  (context-param)
+**french version**
+- on peut dire à une methode d'un controller qu'on doit être authentifié pour l'accéder
+- on peut faire cela à l'aide d'une annotation personnalisé Auth par exemple
+- pour savoir si l'utilisateur est authentifié quand il utilise la methode, on crée une configuration web.xml qui mentionne quelle variable session on regarde (context-param)
+- on les récupère juste une fois (les configurations), donc dans la fonction init de FrontControllerServlet
 # Sprint 10 bis
 - tsy hoe connecté fotsiny fa tsy maintsy manana role specifique

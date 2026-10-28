@@ -49,6 +49,25 @@ Fonctionnalités actuelles :
   - L'objet `USession` est stocké directement dans le `HttpSession` de l'utilisateur.
   - Les modifications effectuées avec `session.set()` sont conservées entre les requêtes de la même session.
 
+- Authentification (Sprint 10)
+  - Vous pouvez protéger les routes grâce à l'annotation @Auth qui, essentiellement, dit que la methode associée à cette route ne peut pas être accédée ou invoquée que si l'utilisateur est authentifié
+  - Pour ce faire, il faut une petite configuration dans web.xml
+  - Ajoutez un nouveau paramètre de contexte appelée `auth.session.key` et mettez en valeur la clé de session qui doit exister pour prouver que l'utilisateur est authentifié
+  Exemple:
+  ```xml
+      <context-param>
+        <param-name>auth.session.key</param-name>
+        <param-value>userId</param-value>
+    </context-param>
+  ```
+- Rôles
+  - Vous pouvez aussi protéger les routes pour que seulement les utilisateurs connectés et les utilisateurs avec des rôles spécifiques puissent y accéder
+  - Vous pouvez faire ça en ajoutant à l'annotation @Auth la liste des seuls rôles qui peuvent accéder à votre route
+  Exemple: `@Auth(roles = {"admin", manager})
+  - Il faut une dernière petite configuration
+  - Il faut dire au framework quelle clé de session vérifier
+  - Donc créer un nouveau paramètre de contexte `role.session.key` qui va avoir comme valeur la clé de session que vous avez créez pour stocker la rôle actuelle
+  
 ## Remarque sur les URLs
 
 - Le `FrontControllerServlet` utilise le mapping `/app/*`.
