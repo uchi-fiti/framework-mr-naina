@@ -10,7 +10,8 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
+import jakarta.servlet.http.HttpSession;
+import uchi.utils.USession;
 import jakarta.servlet.RequestDispatcher;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
@@ -69,6 +70,11 @@ public class FrontControllerServlet extends HttpServlet {
         if(exception != null) {
             throw exception;
         }
+        String controllerBaseUrl =
+        request.getContextPath() + request.getServletPath();
+        System.out.println("Controller base url: " + controllerBaseUrl);
+        
+        request.setAttribute("controllerBaseUrl", controllerBaseUrl);
         Mapping m = getRequestMapping(request, mappings);
         Method method = m.getMethod();
         Object objectInstance = createController(m);
@@ -123,7 +129,11 @@ public class FrontControllerServlet extends HttpServlet {
         int i = 0;
         for(Parameter p : parameters) {
             Object v = null;
-            if(isSimpleType(p.getType())) {
+            if (p.getType() == USession.class) {
+
+                v = resolveUSession(request);
+
+            } else if(isSimpleType(p.getType())) {
 
                 v = convertParameterValue(request.getParameter(p.getName()), p.getType());
 
@@ -415,5 +425,19 @@ public class FrontControllerServlet extends HttpServlet {
 
         System.out.println("File saved to: " + destination);
     }
+    USession resolveUSession(HttpServletRequest request) {
 
+        HttpSession httpSession = request.getSession();
+
+        USession uSession =
+            (USession) httpSession.getAttribute("USession");
+
+        if (uSession == null) {
+            uSession = new USession();
+
+            httpSession.setAttribute("USession", uSession);
+        }
+
+        return uSession;
+}
 }
